@@ -6,7 +6,7 @@ gnss_std_thres: 500.0  # unit: meter
 gnss_freq: 10 # unit: Hz
 
 # LIDAR parameters (GNSS Antenna to LiDAR in Front/Right/Down Axes(meter,degree))
-lidar1_fp: "/root/catkin_ws/pcd/20260508_a/ouster_top/"
+lidar1_fp: "/root/catkin_ws/pcd/20260508_a/ouster_top/"    # If there's no LiDAR data input, leave "", but can't all LiDARs are ""
 lidar1_format: "PCD_BINARY"    # Supported:  OUSTER_OS1_128, OUSTER_OS1_32, VELODYNE_VLP16, VELODYNE_VLS128
 lidar1_type: "OUSTER_OS1_128"    # Supported: PCD_BINARY, PCD_ASCII
 lidar1_la: [0.967,-0.037,0.444] # unit: meter
