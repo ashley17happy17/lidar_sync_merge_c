@@ -1,93 +1,92 @@
 # LiDAR_DynamicMerge_C
 
+## Introduction
+This project is a standalone C++ application that merges multiple lidar data from different sensors and time stamps into one.
 
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
+## Build
+Run the shell script and it will automatically build the code and download the third-party library from gitlab.
 ```
-cd existing_repo
-git remote add origin https://devops.foxconn.com/28500/lidar_dynamicmerge_c.git
-git branch -M main
-git push -uf origin main
+bash build.sh
+# Insert username and password
 ```
 
-## Integrate with your tools
+## Run
+1. Insert the config/params_xxx.yaml file into the config folder.
+2. Modify the run.sh with the corresponding config/params_xxx.yaml file name.
+```
+bash run.sh
+```
 
-* [Set up project integrations](https://devops.foxconn.com/28500/lidar_dynamicmerge_c/-/settings/integrations)
+## Update Third Party Library
+Run the shell script to update the third-party library from gitlab.
+```
+bash update_third_party.sh
+# Insert username and password
+```
 
-## Collaborate with your team
+## Config
+```
+# Parameters for lidar_dynamic_merge_c
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
 
-## Test and Deploy
+# Data IO
+gnss_file: "/root/catkin_ws/pcd/20260508_a/20260508102440_gnss_full_only_ublox.csv"
+gnss_std_thres: 500.0  # unit: meter
+gnss_freq: 10 # unit: Hz
 
-Use the built-in continuous integration in GitLab.
+# LIDAR parameters (GNSS Antenna to LiDAR)
+lidar1_fp: "/root/catkin_ws/pcd/20260508_a/ouster_top/"
+lidar1_format: "PCD_BINARY"
+lidar1_type: "OUSTER_OS1_128"
+lidar1_la: [0.967,-0.037,0.444] # unit: meter
+lidar1_bs: [0.235,-0.496,-79.108] # unit: degree  //[-0.235, 0.496, 100.892]
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+lidar2_fp: "/root/catkin_ws/pcd/20260508_a/velo_LR/"
+lidar2_format: "PCD_BINARY"
+lidar2_type: "VELODYNE_VLP16"
+lidar2_la: [-0.615,-0.612,1.507] # unit: meter
+lidar2_bs: [1.145,0.184,15.95] # unit: degree
 
-***
+lidar3_fp: "/root/catkin_ws/pcd/20260508_a/velo_RR/"
+lidar3_format: "PCD_BINARY"
+lidar3_type: "VELODYNE_VLP16"
+lidar3_la: [-0.257,1.075,1.513] # unit: meter
+lidar3_bs: [-1.507,1.741,12.483] # unit: degree
 
-# Editing this README
+lidar4_fp: "/root/catkin_ws/pcd/20260508_a/velo_RF/"
+lidar4_format: "PCD_BINARY"
+lidar4_type: "VELODYNE_VLP16"
+lidar4_la: [3.748,0.37,1.543] # unit: meter
+lidar4_bs: [-0.221,-0.479,2.684] # unit: degree
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+lidar5_fp: "/root/catkin_ws/pcd/20260508_a/velo_LF/"
+lidar5_format: "PCD_BINARY"
+lidar5_type: "VELODYNE_VLP16"
+lidar5_la: [3.435,-1.386,1.542] # unit: meter
+lidar5_bs: [0.556,0.595,5.272] # unit: degree
 
-## Suggestions for a good README
+# Parameters for CropCloud
+crop_min_bound: [0.0, 0,0, 0,0]        #unit: meter
+crop_max_bound: [60.0, 60.0, 60.0]      #unit: meter        
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+# Parameters for DenoiseCloud
+denoise_radius: 0.01  #unit: meter
+denoise_epsilon: 0.1
 
-## Name
-Choose a self-explaining name for your project.
+# Parameters for DownsampleCloud
+ds_voxel_size: 0.01 # unit: meter
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+# Parameters for Motion Compensation And DG 
+motion_enable: true
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+# Parameters for Merge
+merge_voxel_size: 0.05 # unit: meter
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+# Parameters for Output
+out_lidar: 1
+out_fp: "/root/catkin_ws/pcd/output/"
+out_format: "PCD_BINARY"
+out_la: [0.0, 0.0, 0.0] # unit: meter
+out_bs: [0.0, 0.0, 0.0] # unit: degree
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+```

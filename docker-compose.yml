@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  pc_dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: lidar_dynamic_merge_c:noetic
+    container_name: lidar_dynamic_merge_c
+    network_mode: host
+    privileged: true
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    volumes:
+      - ./src:/root/catkin_ws/src
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - "$HOME/.Xauthority:/root/.Xauthority:rw"
+      - ${DATA_PATH:-/tmp}:/root/catkin_ws/data
+      - ${PCD_PATH:-/tmp}:/root/catkin_ws/pcd
+
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu, utility, compute, graphics, display ]
