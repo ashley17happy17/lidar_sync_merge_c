@@ -273,7 +273,7 @@ void LiDARDynamicMerge::run() {
   int processed_frames = 0;
 
   // Enforce GNSS frequency downsampling (e.g. 10Hz data -> 1Hz processing)
-  double process_interval = 1.0 / gnss_freq_ * 0.9;
+  double process_interval = 1.0 / gnss_freq_ * 0.6;
   double last_processed_time = -1.0;
 
   // Track the last matched index to optimize searching sequentially

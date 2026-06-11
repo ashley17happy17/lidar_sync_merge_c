@@ -13,9 +13,14 @@ int main(int argc, char **argv) {
       std::cout << "Usage: " << argv[0] << " <config_file>" << std::endl;
       return 1;
     }
+    auto start = std::chrono::high_resolution_clock::now();
     std::string config_file = argv[1];
     lidar_dynamic_merge::LiDARDynamicMerge merge(config_file);
     merge.run();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Total execution time: " << elapsed.count() << " seconds"
+              << std::endl;
   } catch (const YAML::BadFile &e) {
     std::cerr << "Error: Config file not found.\n";
   } catch (const YAML::ParserException &e) {
