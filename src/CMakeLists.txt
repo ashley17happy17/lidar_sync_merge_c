@@ -22,6 +22,8 @@ find_package(PCL REQUIRED)
 find_package(Eigen3 REQUIRED)
 # Find yaml-cpp
 find_package(yaml-cpp REQUIRED)
+# Find PDAL
+find_package(PDAL REQUIRED)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(BUILD_WITH_OPENMP ON CACHE BOOL "" FORCE)
@@ -52,6 +54,7 @@ target_link_libraries(
   ${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
+  ${PDAL_LIBRARIES}
   lidar_utils
   yaml-cpp
 )

@@ -19,6 +19,8 @@ RUN apt-get update && apt-get install -y \
     libpcl-dev \
     libeigen3-dev \
     libyaml-cpp-dev \
+    libpdal-dev \
+    pdal \
     && rm -rf /var/lib/apt/lists/*
 
 # 設定預設工作目錄

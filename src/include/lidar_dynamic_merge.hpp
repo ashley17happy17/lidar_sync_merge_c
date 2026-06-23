@@ -20,7 +20,7 @@ namespace lidar_dynamic_merge {
 struct LidarConfig {
   std::string path;
   lidar_utils::FileFormat format;
-  std::string type;
+  lidar_utils::SensorType type;
   Eigen::Vector3d trans;
   Eigen::Vector3d rot; // roll, pitch, yaw or similar. According to params, it's
                        // [roll, pitch, yaw] in degree? Wait, bs is 3 values,

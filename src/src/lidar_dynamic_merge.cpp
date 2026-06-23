@@ -32,10 +32,24 @@ void LiDARDynamicMerge::loadConfig(const std::string &config_file) {
 
       LidarConfig lc;
       lc.path = path;
-      if (config_[prefix + "type"])
-        lc.type = config_[prefix + "type"].as<std::string>();
-      else
-        lc.type = "UNKNOWN";
+      if (config_[prefix + "type"]) {
+        std::string type_str = config_[prefix + "type"].as<std::string>();
+        if (type_str == "OUSTER_OS1_128")
+          lc.type = lidar_utils::SensorType::OUSTER_OS1_128;
+        else if (type_str == "OUSTER_OS1_32")
+          lc.type = lidar_utils::SensorType::OUSTER_OS1_32;
+        else if (type_str == "VELODYNE_VLP16")
+          lc.type = lidar_utils::SensorType::VELODYNE_VLP16;
+        else if (type_str == "VELODYNE_VLS128")
+          lc.type = lidar_utils::SensorType::VELODYNE_VLS128;
+        else {
+          std::cout << "[Error] Config: Wrong LiDAR Type input." << std::endl;
+          exit(1);
+        }
+      } else {
+        std::cout << "[Error] Config: Wrong LiDAR Type input." << std::endl;
+        exit(1);
+      }
       if (config_[prefix + "format"]) {
         std::string fmt_str = config_[prefix + "format"].as<std::string>();
         if (fmt_str == "PCD_ASCII")
@@ -215,7 +229,7 @@ void LiDARDynamicMerge::processFrame(
     // === Transform LiDAR to GNSS Antenna Frame ===
     Eigen::Matrix4d ext = lidar_utils::CloudUtils::getExtrinsics(
         config.type, config.trans, config.rot);
-    lidar_utils::CloudUtils::directGeoreference(cloud, ext);
+    lidar_utils::CloudUtils::directGeoreference(cloud, cloud, ext);
 
     // === Motion Compensation and Transform to Global Frame ===
     // Interpolate between current GNSS and NEXT GNSS
@@ -244,7 +258,7 @@ void LiDARDynamicMerge::processFrame(
   if (lidars_.count(out_lidar_)) {
     // === Transform from Global Frame to GNSS Frame ===
     Eigen::Matrix4d predicted_pose_inv = gnss.getTransform().inverse();
-    lidar_utils::CloudUtils::directGeoreference(merged_cloud,
+    lidar_utils::CloudUtils::directGeoreference(merged_cloud, merged_cloud,
                                                 predicted_pose_inv);
 
     // === Transform from GNSS Frame to out_lidar Frame ===
@@ -253,7 +267,8 @@ void LiDARDynamicMerge::processFrame(
                                                      lidars_[out_lidar_].trans,
                                                      lidars_[out_lidar_].rot)
                   .inverse();
-    lidar_utils::CloudUtils::directGeoreference(merged_cloud, inv_ext);
+    lidar_utils::CloudUtils::directGeoreference(merged_cloud, merged_cloud,
+                                                inv_ext);
 
     // === Save Dynamic Merge File ===
     std::string out_file = out_fp_ + "/" +
