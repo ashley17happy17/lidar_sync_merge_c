@@ -10,31 +10,31 @@ lidar1_fp: "/root/catkin_ws/pcd/20260508_a/ouster_top/"    # If there's no LiDAR
 lidar1_format: "PCD_BINARY"    # Supported:  OUSTER_OS1_128, OUSTER_OS1_32, VELODYNE_VLP16, VELODYNE_VLS128
 lidar1_type: "OUSTER_OS1_128"    # Supported: PCD_BINARY, PCD_ASCII
 lidar1_la: [0.467, 0.267, -0.396] # unit: meter
-lidar1_bs: [2.131, 0.677, -89.420] # unit: degree  //[-0.235, 0.496, 100.892]
+lidar1_bs: [-2.131, 0.677, -89.420] # unit: degree  //[-0.235, 0.496, 100.892]
 
 lidar2_fp: "/root/catkin_ws/pcd/20260508_a/velo_LR/"
 lidar2_format: "PCD_BINARY"
 lidar2_type: "VELODYNE_VLP16"
 lidar2_la: [-1.013, -0.636, 0.628] # unit: meter
-lidar2_bs: [-0.020, -1.297, 5.778] # unit: degree
+lidar2_bs: [-0.020, 1.297, 5.778] # unit: degree
 
 lidar3_fp: "/root/catkin_ws/pcd/20260508_a/velo_RR/"
 lidar3_format: "PCD_BINARY"
 lidar3_type: "VELODYNE_VLP16"
 lidar3_la: [-0.939, 1.123, 0.682] # unit: meter
-lidar3_bs: [-0.858, -4.668, 2.201] # unit: degree
+lidar3_bs: [-0.858, 4.668, 2.201] # unit: degree
 
 lidar4_fp: "/root/catkin_ws/pcd/20260508_a/velo_RF/"
 lidar4_format: "PCD_BINARY"
 lidar4_type: "VELODYNE_VLP16"
 lidar4_la: [3.136, 1.114, 0.704] # unit: meter
-lidar4_bs: [0.602, -2.361, -7.354] # unit: degree
+lidar4_bs: [0.602, 2.361, -7.354] # unit: degree
 
 lidar5_fp: "/root/catkin_ws/pcd/20260508_a/velo_LF/"
 lidar5_format: "PCD_BINARY"
 lidar5_type: "VELODYNE_VLP16"
 lidar5_la: [3.163, -0.700, 0.630] # unit: meter
-lidar5_bs: [-0.680, -2.299, -4.954] # unit: degree
+lidar5_bs: [-0.680, 2.299, -4.954] # unit: degree
 
 # Parameters for CropCloud
 crop_min_bound: [0.0, 0,0, 0,0]        #unit: meter
