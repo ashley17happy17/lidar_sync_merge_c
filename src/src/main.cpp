@@ -1,4 +1,4 @@
-#include "lidar_dynamic_merge.hpp"
+#include "lidar_dynamicmerge_c/dynamic_merge_node.hpp"
 #include <iostream>
 #include <pcl/console/print.h>
 #include <string>
@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
     }
     auto start = std::chrono::high_resolution_clock::now();
     std::string config_file = argv[1];
-    lidar_dynamic_merge::LiDARDynamicMerge merge(config_file);
+    lidar_dynamic_merge::DynamicMergeNode merge(config_file);
     merge.run();
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;

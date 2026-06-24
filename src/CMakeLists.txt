@@ -49,7 +49,7 @@ add_subdirectory(third_party/lidar_utils_lib/src)
 
 
 # Node Executable
-add_executable(${PROJECT_NAME}_node src/main.cpp src/lidar_dynamic_merge.cpp)
+add_executable(${PROJECT_NAME}_node src/main.cpp src/dynamic_merge_node.cpp src/gnss_processor.cpp src/config_loader.cpp src/time_sync.cpp)
 target_link_libraries(
   ${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
