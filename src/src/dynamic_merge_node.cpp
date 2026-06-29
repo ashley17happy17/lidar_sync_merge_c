@@ -12,7 +12,6 @@ DynamicMergeNode::DynamicMergeNode(const std::string &config_file) {
   loadLidarContent();
 }
 
-
 void DynamicMergeNode::loadGnssData() {
   Eigen::Vector3d local_origin;
   processGNSSData(gnss_file_, gnss_data_list_, local_origin);
@@ -25,8 +24,15 @@ void DynamicMergeNode::loadLidarContent() {
     std::vector<lidar_utils::LidarContent> file_list;
     lidar_utils::CloudUtils::readContent(config.path, file_list);
 
+    if (file_list.empty()) {
+      LOG_ERROR("LiDAR " << id << " loaded 0 frames from " << config.path
+                         << "! Please check if the directory is correct and "
+                            "contains valid files.");
+    }
+
     lidar_files_[id] = file_list;
-    LOG_INFO("Lidar " << id << " successfully loaded " << file_list.size() << " frames.");
+    LOG_INFO("LiDAR " << id << " successfully loaded " << file_list.size()
+                      << " frames.");
   }
 }
 
@@ -46,6 +52,11 @@ void DynamicMergeNode::processFrame(
     // === Read LiDAR File ===
     lidar_utils::CloudUtils::readFile(cloud, timestamps, matched_file,
                                       config.format);
+    if (cloud->empty()) {
+      LOG_WARN("LiDAR " << id << " loaded an empty point cloud from file: "
+                        << matched_file);
+      continue;
+    }
 
     // === Crop Cloud ===
     Eigen::Vector3f minBound(crop_min_[0], crop_min_[1], crop_min_[2]);
@@ -88,6 +99,13 @@ void DynamicMergeNode::processFrame(
   }
 
   if (lidars_.count(out_lidar_)) {
+    if (merged_cloud->empty()) {
+      LOG_WARN("Merged point cloud is empty, skipping save for GNSS "
+               "timestamp: "
+               << std::setprecision(13) << gnss.timestamp);
+      return;
+    }
+
     // === Transform from Global Frame to GNSS Frame ===
     Eigen::Matrix4d predicted_pose_inv = gnss.getTransform().inverse();
     lidar_utils::CloudUtils::directGeoreference(merged_cloud, merged_cloud,
@@ -112,7 +130,9 @@ void DynamicMergeNode::processFrame(
 }
 
 void DynamicMergeNode::run() {
-  LOG_INFO("Starting synchronization loop...\n---------------------------------------------------------");
+  LOG_INFO(
+      "Starting synchronization "
+      "loop...\n---------------------------------------------------------");
 
   auto sync_frames = synchronizeFrames(gnss_data_list_, lidar_files_,
                                        gnss_freq_, gnss_std_thres_);
@@ -121,10 +141,13 @@ void DynamicMergeNode::run() {
   for (const auto &frame : sync_frames) {
     processFrame(frame.curr_gnss, &frame.next_gnss, frame.matched_files);
     processed_frames++;
-    LOG_INFO("Finish merge GNSS timestamp:" << std::setprecision(13) << frame.next_gnss.timestamp << ", frame: " << processed_frames);
+    LOG_INFO("Finish merge GNSS timestamp:" << std::setprecision(13)
+                                            << frame.next_gnss.timestamp
+                                            << ", frame: " << processed_frames);
   }
 
-  LOG_INFO("LiDAR_Dynamic_Merge finished running. Processed " << processed_frames << " synchronized frames.");
+  LOG_INFO("LiDAR_Dynamic_Merge finished running. Processed "
+           << processed_frames << " synchronized frames.");
 }
 
 } // namespace lidar_dynamic_merge

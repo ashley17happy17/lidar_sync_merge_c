@@ -16,7 +16,7 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
     if (config_[prefix + "fp"]) {
       std::string path = config_[prefix + "fp"].as<std::string>();
       if (path.empty()) {
-        LOG_INFO("Skipping lidar " << i << " because fp is empty.");
+        LOG_WARN("Skipping lidar " << i << " because fp is empty.");
         continue;
       }
 

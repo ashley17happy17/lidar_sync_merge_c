@@ -1,4 +1,5 @@
 #include "lidar_dynamicmerge_c/time_sync.hpp"
+#include "lidar_dynamicmerge_c/logger.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -31,6 +32,8 @@ std::vector<SyncFrame> synchronizeFrames(
   for (const auto &gnss : gnss_data_list) {
     // 1. Reject bad GNSS data based on threshold
     if (gnss.position_std.norm() > gnss_std_thres) {
+      LOG_WARN("GNSS rejected due to high standard deviation: "
+               << gnss.position_std.norm() << " > " << gnss_std_thres);
       continue;
     }
 
@@ -91,6 +94,10 @@ std::vector<SyncFrame> synchronizeFrames(
       }
 
       if (min_diff > sync_threshold) {
+        LOG_WARN("LiDAR " << id << " failed sync: min_diff (" << min_diff
+                          << "s) > threshold (" << sync_threshold
+                          << "s) at GNSS time " << std::setprecision(13)
+                          << target_timestamp);
         all_matched = false;
         break;
       }
@@ -113,6 +120,13 @@ std::vector<SyncFrame> synchronizeFrames(
       curr_matched_files = matched_files;
       has_curr = true;
     }
+  }
+
+  if (sync_frames.empty()) {
+    LOG_ERROR("Synchronization resulted in 0 frames! Please check GNSS "
+              "frequency, std threshold, and LiDAR timestamps overlap.");
+  } else {
+    LOG_INFO("Successfully synchronized " << sync_frames.size() << " frames.");
   }
 
   return sync_frames;
