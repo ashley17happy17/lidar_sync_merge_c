@@ -1,5 +1,9 @@
 ## Parameters for lidar_dynamic_merge_c
 
+# Logging configuration
+# Supported levels: DEBUG, INFO, WARN, ERROR, FATAL
+log_level: "WARN"  # It will save everything from log level and above
+
 # Data IO
 gnss_file: "/root/catkin_ws/pcd/20260508_a/20260508102440_gnss_full_only_ublox.csv"
 gnss_std_thres: 500.0  # unit: meter
@@ -38,7 +42,7 @@ lidar5_bs: [-0.680, 2.299, -4.954] # unit: degree
 
 # Parameters for CropCloud
 crop_min_bound: [0.0, 0,0, 0,0]        #unit: meter
-crop_max_bound: [60.0, 60.0, 60.0]      #unit: meter        
+crop_max_bound: [100.0, 100.0, 100.0]      #unit: meter        
 
 # Parameters for DenoiseCloud
 denoise_radius: 0.01  #unit: meter

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <lidar_utils/cloud_utils.hpp>
 #include "lidar_dynamicmerge_c/types.hpp"
+#include "lidar_dynamicmerge_c/logger.hpp"
 #include "lidar_dynamicmerge_c/time_sync.hpp"
 #include "lidar_dynamicmerge_c/gnss_processor.hpp"
 #include <map>

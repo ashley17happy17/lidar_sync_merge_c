@@ -20,15 +20,13 @@ void DynamicMergeNode::loadGnssData() {
 
 void DynamicMergeNode::loadLidarContent() {
   for (const auto &[id, config] : lidars_) {
-    std::cout << "[INFO] Loading file list for lidar " << id << ": "
-              << config.path << std::endl;
+    LOG_INFO("Loading file list for lidar " << id << ": " << config.path);
 
     std::vector<lidar_utils::LidarContent> file_list;
     lidar_utils::CloudUtils::readContent(config.path, file_list);
 
     lidar_files_[id] = file_list;
-    std::cout << "[INFO] Lidar " << id << " successfully loaded "
-              << file_list.size() << " frames." << std::endl;
+    LOG_INFO("Lidar " << id << " successfully loaded " << file_list.size() << " frames.");
   }
 }
 
@@ -114,8 +112,7 @@ void DynamicMergeNode::processFrame(
 }
 
 void DynamicMergeNode::run() {
-  std::cout << "[INFO] Starting synchronization loop...\n"
-            << "---------------------------------------------------------\n";
+  LOG_INFO("Starting synchronization loop...\n---------------------------------------------------------");
 
   auto sync_frames = synchronizeFrames(gnss_data_list_, lidar_files_,
                                        gnss_freq_, gnss_std_thres_);
@@ -124,13 +121,10 @@ void DynamicMergeNode::run() {
   for (const auto &frame : sync_frames) {
     processFrame(frame.curr_gnss, &frame.next_gnss, frame.matched_files);
     processed_frames++;
-    std::cout << "[INFO] Finish merge GNSS timestamp:"
-              << std::setprecision(13) << frame.next_gnss.timestamp
-              << ", frame: " << processed_frames << std::endl;
+    LOG_INFO("Finish merge GNSS timestamp:" << std::setprecision(13) << frame.next_gnss.timestamp << ", frame: " << processed_frames);
   }
 
-  std::cout << "[INFO] LiDAR_Dynamic_Merge finished running. Processed "
-            << processed_frames << " synchronized frames.\n";
+  LOG_INFO("LiDAR_Dynamic_Merge finished running. Processed " << processed_frames << " synchronized frames.");
 }
 
 } // namespace lidar_dynamic_merge
