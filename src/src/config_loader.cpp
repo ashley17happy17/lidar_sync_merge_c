@@ -16,7 +16,8 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
     if (config_[prefix + "fp"]) {
       std::string path = config_[prefix + "fp"].as<std::string>();
       if (path.empty()) {
-        LOG_WARN("Skipping lidar " << i << " because fp is empty.");
+        LOG_WARN("Load Config: Skipping LiDAR " << i
+                                                << " because fp is empty.");
         continue;
       }
 
@@ -33,11 +34,11 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
         else if (type_str == "VELODYNE_VLS128")
           lc.type = lidar_utils::SensorType::VELODYNE_VLS128;
         else {
-          LOG_ERROR("Config: Wrong LiDAR Type input.");
+          LOG_FATAL("Load Config: Wrong LiDAR Type input.");
           exit(1);
         }
       } else {
-        LOG_ERROR("Config: Wrong LiDAR Type input.");
+        LOG_FATAL("Load Config: Wrong LiDAR Type input.");
         exit(1);
       }
       if (config_[prefix + "format"]) {
@@ -62,7 +63,7 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
   }
 
   if (lidars_.empty()) {
-    LOG_ERROR("All lidar file paths are empty. Exiting.");
+    LOG_FATAL("Load Config: All lidar file paths are empty. Exiting.");
     exit(1);
   }
 

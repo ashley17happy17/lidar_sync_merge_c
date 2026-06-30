@@ -49,13 +49,11 @@ void WGS84toTWD97(double lat, double lon, double &x, double &y) {
 void processGNSSData(const std::string &gnss_file_path,
                      std::vector<GNSSData> &gnss_data_list,
                      Eigen::Vector3d &local_origin) {
-  LOG_INFO("Processing GNSS data with WGS84 -> TWD97-2010 projection -> Local "
-           "Cartesian: "
-           << gnss_file_path);
+  LOG_INFO("Process GNSS: Loading GNSS File: " << gnss_file_path);
   std::ifstream gnss_file(gnss_file_path);
 
   if (!gnss_file.is_open()) {
-    LOG_ERROR("Could not open the file.");
+    LOG_FATAL("Process GNSS: Could not open the GNSS file.");
     exit(1);
   }
 
@@ -90,9 +88,13 @@ void processGNSSData(const std::string &gnss_file_path,
       if (!origin_set) {
         local_origin = Eigen::Vector3d(x, y, z);
         origin_set = true;
-        LOG_INFO(std::fixed << std::setprecision(10)
-                            << "Set Local Cartesian Origin to TWD97: X=" << x
-                            << ", Y=" << y << ", Z=" << z);
+        LOG_INFO(
+            std::fixed
+            << std::setprecision(10)
+            << "Process GNSS: Projecting GNSS from WGS84 -> TWD97-2010 "
+               "projection -> Local Cartesian, set Local Cartesian Origin to "
+               "TWD97: X="
+            << x << ", Y=" << y << ", Z=" << z);
       }
 
       // Transform to Local Cartesian
@@ -128,7 +130,8 @@ void processGNSSData(const std::string &gnss_file_path,
     }
   }
   gnss_file.close();
-  LOG_INFO("Successfully loaded " << gnss_data_list.size() << " GNSS records.");
+  LOG_INFO("Process GNSS: Successfully loaded " << gnss_data_list.size()
+                                                << " GNSS records.");
 }
 
 } // namespace lidar_dynamic_merge

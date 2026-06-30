@@ -29,8 +29,8 @@ bash update_third_party.sh
 ## Parameters for lidar_dynamic_merge_c
 
 # Logging configuration
-# Supported levels: DEBUG, INFO, WARN, ERROR, FATAL
-log_level: "INFO"  # It will save everything from log level and above
+# It will save everything from log level and above
+log_level: "INFO"  # Supported levels: DEBUG, INFO, WARN, ERROR, FATAL
 
 # Data IO
 gnss_file: "/root/catkin_ws/pcd/20260508_a/20260508102440_gnss_full_only_ublox.csv"
