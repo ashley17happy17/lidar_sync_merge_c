@@ -1,6 +1,6 @@
 #include "lidar_dynamicmerge_c/dynamic_merge_node.hpp"
-#include <iostream>
 #include <filesystem>
+#include <iostream>
 namespace lidar_dynamic_merge {
 
 void DynamicMergeNode::loadConfig(const std::string &config_file) {
@@ -92,6 +92,15 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
   auto out_bs = config_["out_bs"].as<std::vector<double>>();
   out_la_ = Eigen::Vector3d(out_la[0], out_la[1], out_la[2]);
   out_bs_ = Eigen::Vector3d(out_bs[0], out_bs[1], out_bs[2]);
+  if (out_la_.isZero() && out_bs_.isZero()) {
+    LOG_INFO("Load Config: out_la and out_bs are zero, output to LiDAR "
+             << out_lidar_ << " center.");
+  } else {
+    LOG_INFO("Load Config: output to position with leverarm(m) ["
+             << out_la_[0] << ", " << out_la_[1] << ", " << out_la_[2]
+             << "] and boresight (deg) [" << out_bs_[0] << ", " << out_bs_[1]
+             << ", " << out_bs_[2] << "].");
+  }
 }
 
 } // namespace lidar_dynamic_merge
