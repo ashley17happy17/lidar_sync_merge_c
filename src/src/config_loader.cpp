@@ -1,6 +1,6 @@
 #include "lidar_dynamicmerge_c/dynamic_merge_node.hpp"
 #include <iostream>
-
+#include <filesystem>
 namespace lidar_dynamic_merge {
 
 void DynamicMergeNode::loadConfig(const std::string &config_file) {
@@ -77,6 +77,9 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
 
   out_lidar_ = config_["out_lidar"].as<int>();
   out_fp_ = config_["out_fp"].as<std::string>();
+  if (!out_fp_.empty()) {
+    std::filesystem::create_directories(out_fp_);
+  }
   std::string fmt = config_["out_format"].as<std::string>();
   if (fmt == "PCD_ASCII")
     out_format_ = lidar_utils::FileFormat::PCD_ASCII;

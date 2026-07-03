@@ -5,36 +5,36 @@
 log_level: "INFO"  # Supported levels: DEBUG, INFO, WARN, ERROR, FATAL
 
 # Data IO
-gnss_file: "/root/catkin_ws/pcd/20260508_a/20260508102440_gnss_full_only_ublox.csv"
+gnss_file: "/root/catkin_ws/pcd/20260629_a/pcd/20260629182219_gnss_full.csv"
 gnss_std_thres: 500.0  # unit: meter
 gnss_freq: 10 # unit: Hz
 
 # LIDAR parameters (GNSS Antenna to LiDAR in Front/Right/Down Axes(meter,degree))
-lidar1_fp: "/root/catkin_ws/pcd/20260508_a/ouster_top/"    # If there's no LiDAR data input, leave "", but can't all LiDARs are ""
+lidar1_fp: "/root/catkin_ws/pcd/20260629_a/pcd/ouster_top/"    # If there's no LiDAR data input, leave "", but can't all LiDARs are ""
 lidar1_format: "PCD_BINARY"    # Supported:  OUSTER_OS1_128, OUSTER_OS1_32, VELODYNE_VLP16, VELODYNE_VLS128
 lidar1_type: "OUSTER_OS1_128"    # Supported: PCD_BINARY, PCD_ASCII
 lidar1_la: [0.967,-0.037,0.444] # unit: meter
 lidar1_bs: [0.235,-0.496,-79.108] # unit: degree  //[-0.235, 0.496, 100.892]
 
-lidar2_fp: "/root/catkin_ws/pcd/20260508_a/velo_LR/"
+lidar2_fp: "/root/catkin_ws/pcd/20260629_a/pcd/velo_LR/"
 lidar2_format: "PCD_BINARY"
 lidar2_type: "VELODYNE_VLP16"
 lidar2_la: [-0.615,-0.612,1.507] # unit: meter
 lidar2_bs: [1.145,0.184,15.95] # unit: degree
 
-lidar3_fp: "/root/catkin_ws/pcd/20260508_a/velo_RR/"
+lidar3_fp: "/root/catkin_ws/pcd/20260629_a/pcd/velo_RR/"
 lidar3_format: "PCD_BINARY"
 lidar3_type: "VELODYNE_VLP16"
 lidar3_la: [-0.257,1.075,1.513] # unit: meter
 lidar3_bs: [-1.507,1.741,12.483] # unit: degree
 
-lidar4_fp: "/root/catkin_ws/pcd/20260508_a/velo_RF/"
+lidar4_fp: "/root/catkin_ws/pcd/20260629_a/pcd/velo_RF/"
 lidar4_format: "PCD_BINARY"
 lidar4_type: "VELODYNE_VLP16"
 lidar4_la: [3.748,0.37,1.543] # unit: meter
 lidar4_bs: [-0.221,-0.479,2.684] # unit: degree
 
-lidar5_fp: "/root/catkin_ws/pcd/20260508_a/velo_LF/"
+lidar5_fp: "/root/catkin_ws/pcd/20260629_a/pcd/velo_LF/"
 lidar5_format: "PCD_BINARY"
 lidar5_type: "VELODYNE_VLP16"
 lidar5_la: [3.435,-1.386,1.542] # unit: meter
@@ -42,7 +42,7 @@ lidar5_bs: [0.556,0.595,5.272] # unit: degree
 
 # Parameters for CropCloud
 crop_min_bound: [0.0, 0,0, 0,0]        #unit: meter
-crop_max_bound: [60.0, 60.0, 60.0]      #unit: meter        
+crop_max_bound: [100.0, 100.0, 100.0]      #unit: meter        
 
 # Parameters for DenoiseCloud
 denoise_radius: 0.01  #unit: meter
@@ -59,7 +59,7 @@ merge_voxel_size: 0.01 # unit: meter
 
 # Parameters for Output
 out_lidar: 1
-out_fp: "/root/catkin_ws/pcd/output/"
+out_fp: "/root/catkin_ws/pcd/output/20260629_a_pcd/"
 out_format: "PCD_BINARY"
 out_la: [0.0, 0.0, 0.0] # unit: meter
 out_bs: [0.0, 0.0, 0.0] # unit: degree

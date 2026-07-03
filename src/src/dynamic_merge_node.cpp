@@ -67,7 +67,8 @@ void DynamicMergeNode::processFrame(
     lidar_utils::CloudUtils::cropCloud(cloud, timestamps, minBound, maxBound);
 
     // === Denoise Cloud ===
-    lidar_utils::CloudUtils::denoiseCloud(cloud, 0.01f, 0.1f);
+    lidar_utils::CloudUtils::denoiseCloud(cloud, denoise_radius_,
+                                          denoise_epsilon_);
 
     // === Remove Artifact Cloud ===
     lidar_utils::CloudUtils::removeArtifactCloud(cloud, timestamps);
@@ -115,12 +116,20 @@ void DynamicMergeNode::processFrame(
     lidar_utils::CloudUtils::directGeoreference(merged_cloud, merged_cloud,
                                                 predicted_pose_inv);
 
-    // === Transform from GNSS Frame to out_lidar Frame ===
+    // === Transform from GNSS Frame to Target Frame ===
     Eigen::Matrix4d inv_ext;
-    inv_ext = lidar_utils::CloudUtils::getExtrinsics(lidars_[out_lidar_].type,
-                                                     lidars_[out_lidar_].trans,
-                                                     lidars_[out_lidar_].rot)
-                  .inverse();
+    if (out_la_.isZero() && out_bs_.isZero()) {
+      inv_ext = lidar_utils::CloudUtils::getExtrinsics(lidars_[out_lidar_].type,
+                                                       lidars_[out_lidar_].trans,
+                                                       lidars_[out_lidar_].rot)
+                    .inverse();
+    } else {
+      // Convert FRD Lever Arm to FLU (X_flu = X_frd, Y_flu = -Y_frd, Z_flu = -Z_frd)
+      Eigen::Vector3d out_la_flu(out_la_.x(), -out_la_.y(), -out_la_.z());
+      inv_ext = lidar_utils::CloudUtils::transformEOP(Eigen::Matrix4d::Identity(),
+                                                      out_la_flu, out_bs_)
+                    .inverse();
+    }
     lidar_utils::CloudUtils::directGeoreference(merged_cloud, merged_cloud,
                                                 inv_ext);
 
@@ -142,12 +151,21 @@ void DynamicMergeNode::run() {
                                        gnss_freq_, gnss_std_thres_);
   int processed_frames = 0;
 
-  for (const auto &frame : sync_frames) {
+#pragma omp parallel for schedule(dynamic)
+  for (size_t i = 0; i < sync_frames.size(); ++i) {
+    const auto &frame = sync_frames[i];
     processFrame(frame.curr_gnss, &frame.next_gnss, frame.matched_files);
-    processed_frames++;
+    
+    int current_processed;
+#pragma omp atomic capture
+    {
+      processed_frames++;
+      current_processed = processed_frames;
+    }
+    
     LOG_INFO("Run: Finish merge GNSS timestamp: "
              << std::setprecision(13) << frame.next_gnss.timestamp
-             << ", frame: " << processed_frames);
+             << ", frame: " << current_processed << " / " << sync_frames.size());
   }
 
   LOG_INFO("Run: LiDAR_Dynamic_Merge finished running. Processed "
