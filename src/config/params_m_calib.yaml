@@ -3,6 +3,7 @@
 # Logging configuration
 # It will save everything from log level and above
 log_level: "INFO"  # Supported levels: DEBUG, INFO, WARN, ERROR, FATAL
+console_output: false # Set to false to disable printing to terminal (errors will still print)
 
 # Data IO
 gnss_file: "/root/catkin_ws/pcd/20260629_a/pcd/20260629182219_gnss_full.csv"

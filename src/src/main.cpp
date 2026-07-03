@@ -55,6 +55,11 @@ int main(int argc, char **argv) {
         lidar_dynamic_merge::Logger::getInstance().setLevel(
             lidar_dynamic_merge::LogLevel::FATAL);
     }
+
+    if (config["console_output"]) {
+      lidar_dynamic_merge::Logger::getInstance().setConsoleOutput(
+          config["console_output"].as<bool>());
+    }
   } catch (...) {
     mkdir("log", 0777);
     lidar_dynamic_merge::Logger::getInstance().init("log/" + log_filename);

@@ -74,10 +74,12 @@ public:
     std::string log_msg = ss.str();
 
     std::lock_guard<std::mutex> lock(mutex_);
-    if (level == LogLevel::ERROR || level == LogLevel::FATAL) {
-      std::cerr << log_msg << std::endl;
-    } else {
-      std::cout << log_msg << std::endl;
+    if (console_output_) {
+      if (level == LogLevel::ERROR || level == LogLevel::FATAL) {
+        std::cerr << log_msg << std::endl;
+      } else {
+        std::cout << log_msg << std::endl;
+      }
     }
 
     if (file_stream_.is_open()) {
@@ -104,6 +106,10 @@ private:
   std::ofstream file_stream_;
   std::mutex mutex_;
   LogLevel current_level_ = LogLevel::INFO;
+  bool console_output_ = true;
+
+public:
+  void setConsoleOutput(bool enable) { console_output_ = enable; }
 };
 
 } // namespace lidar_dynamic_merge
