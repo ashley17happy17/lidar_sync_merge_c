@@ -31,6 +31,7 @@ bash update_third_party.sh
 # Logging configuration
 # It will save everything from log level and above
 log_level: "INFO"  # Supported levels: DEBUG, INFO, WARN, ERROR, FATAL
+console_output: false # Set to false to disable printing to terminal (errors will still print)
 
 # Data IO
 gnss_file: "/root/catkin_ws/pcd/20260508_a/20260508102440_gnss_full_only_ublox.csv"

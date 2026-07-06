@@ -60,7 +60,7 @@ merge_voxel_size: 0.01 # unit: meter
 
 # Parameters for Output
 out_lidar: 1
-out_fp: "/root/catkin_ws/pcd/output/tmp/"
+out_fp: "/root/catkin_ws/pcd/output/20260629_a/"
 out_format: "PCD_BINARY"
 out_la: [0.0, 0.0, 0.0] # unit: meter
 out_bs: [0.0, 0.0, 0.0] # unit: degree
