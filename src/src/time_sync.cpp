@@ -8,12 +8,13 @@ namespace lidar_dynamic_merge {
 std::vector<SyncFrame> synchronizeFrames(
     const std::vector<GNSSData> &gnss_data_list,
     const std::map<int, std::vector<lidar_utils::LidarContent>> &lidar_files,
-    double gnss_freq, double gnss_std_thres) {
+    double gnss_freq, double gnss_std_thres, double lidar_hz) {
 
   std::vector<SyncFrame> sync_frames;
 
-  // Synchronization threshold (e.g., 0.05 seconds = 50 ms)
-  double sync_threshold = 1.0 / gnss_freq / 2;
+  // Max allowed gap between the GNSS timestamp and the LiDAR frame it syncs
+  // to (e.g., 10 Hz LiDAR -> 0.1s)
+  double sync_threshold = 1.0 / lidar_hz;
 
   // Enforce GNSS frequency downsampling (e.g. 10Hz data -> 1Hz processing)
   double process_interval = 1.0 / gnss_freq * 0.6;
@@ -58,44 +59,28 @@ std::vector<SyncFrame> synchronizeFrames(
 
       size_t start_idx = search_start_idx[id];
 
-      // Binary search starting from the last matched index
+      // Binary search starting from the last matched index. lower_bound
+      // returns the first LiDAR frame whose timestamp is >= the GNSS
+      // timestamp, i.e. the earliest LiDAR frame at or after the GNSS fix.
       auto it = std::lower_bound(file_list.begin() + start_idx, file_list.end(),
                                  target_timestamp,
                                  [](const lidar_utils::LidarContent &a,
                                     double val) { return a.timestamp < val; });
 
-      double min_diff = 1e9;
-      std::string matched_file;
-      size_t matched_idx = start_idx;
-
-      // Find the Nearest LiDAR Timestamp To GNSS Timestamp
+      // No LiDAR frame at or after this GNSS timestamp is available.
       if (it == file_list.end()) {
-        auto prev = it - 1;
-        min_diff = std::abs(prev->timestamp - target_timestamp);
-        matched_file = prev->filename;
-        matched_idx = std::distance(file_list.begin(), prev);
-      } else if (it == file_list.begin()) {
-        min_diff = std::abs(it->timestamp - target_timestamp);
-        matched_file = it->filename;
-        matched_idx = std::distance(file_list.begin(), it);
-      } else {
-        auto prev = it - 1;
-        double diff_prev = std::abs(prev->timestamp - target_timestamp);
-        double diff_it = std::abs(it->timestamp - target_timestamp);
-        if (diff_prev < diff_it) {
-          min_diff = diff_prev;
-          matched_file = prev->filename;
-          matched_idx = std::distance(file_list.begin(), prev);
-        } else {
-          min_diff = diff_it;
-          matched_file = it->filename;
-          matched_idx = std::distance(file_list.begin(), it);
-        }
+        LOG_WARN("Time Sync: LiDAR "
+                 << id << " failed sync, no LiDAR frame at or after GNSS time "
+                 << std::setprecision(13) << target_timestamp);
+        all_matched = false;
+        break;
       }
 
-      if (min_diff > sync_threshold) {
+      double diff = it->timestamp - target_timestamp;
+
+      if (diff > sync_threshold) {
         LOG_WARN("Time Sync: LiDAR "
-                 << id << " failed sync, min_diff (" << min_diff
+                 << id << " failed sync, diff (" << diff
                  << "s) > threshold (" << sync_threshold << "s) at GNSS time "
                  << std::setprecision(13) << target_timestamp);
         all_matched = false;
@@ -103,8 +88,8 @@ std::vector<SyncFrame> synchronizeFrames(
       }
 
       // Cache index to start from here next time
-      search_start_idx[id] = matched_idx;
-      matched_files[id] = matched_file;
+      search_start_idx[id] = std::distance(file_list.begin(), it);
+      matched_files[id] = it->filename;
     }
 
     if (all_matched) {

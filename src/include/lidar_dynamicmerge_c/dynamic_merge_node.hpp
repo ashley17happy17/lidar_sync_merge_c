@@ -43,6 +43,7 @@ private:
   std::string gnss_file_;
   double gnss_std_thres_;
   double gnss_freq_;
+  double lidar_hz_;
 
   std::map<int, LidarConfig> lidars_;
   std::map<int, std::vector<lidar_utils::LidarContent>>

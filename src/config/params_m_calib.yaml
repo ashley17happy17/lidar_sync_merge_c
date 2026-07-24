@@ -9,6 +9,7 @@ console_output: false # Set to false to disable printing to terminal (errors wil
 gnss_file: "/root/catkin_ws/pcd/20260629_a/pcd/20260629182219_gnss_full.csv"
 gnss_std_thres: 500.0  # unit: meter
 gnss_freq: 10 # unit: Hz
+lidar_hz: 10 # unit: Hz, max allowed GNSS-to-LiDAR time gap during sync is 1/lidar_hz
 
 # LIDAR parameters (GNSS Antenna to LiDAR in Front/Right/Down Axes(meter,degree))
 lidar1_fp: "/root/catkin_ws/pcd/20260629_a/pcd/ouster_top/"    # If there's no LiDAR data input, leave "", but can't all LiDARs are ""

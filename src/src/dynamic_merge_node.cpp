@@ -148,7 +148,7 @@ void DynamicMergeNode::run() {
       "loop...\n---------------------------------------------------------");
 
   auto sync_frames = synchronizeFrames(gnss_data_list_, lidar_files_,
-                                       gnss_freq_, gnss_std_thres_);
+                                       gnss_freq_, gnss_std_thres_, lidar_hz_);
   int processed_frames = 0;
 
 #pragma omp parallel for schedule(dynamic)

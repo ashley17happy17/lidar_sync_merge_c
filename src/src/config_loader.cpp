@@ -9,6 +9,7 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
   gnss_file_ = config_["gnss_file"].as<std::string>();
   gnss_std_thres_ = config_["gnss_std_thres"].as<double>();
   gnss_freq_ = config_["gnss_freq"].as<double>();
+  lidar_hz_ = config_["lidar_hz"].as<double>();
 
   // Load lidar configs (1 to 5)
   for (int i = 1; i <= 5; ++i) {

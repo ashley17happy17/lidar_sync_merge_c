@@ -13,6 +13,6 @@ namespace lidar_dynamic_merge {
 std::vector<SyncFrame> synchronizeFrames(
     const std::vector<GNSSData> &gnss_data_list,
     const std::map<int, std::vector<lidar_utils::LidarContent>> &lidar_files,
-    double gnss_freq, double gnss_std_thres);
+    double gnss_freq, double gnss_std_thres, double lidar_hz);
 
 } // namespace lidar_dynamic_merge
