@@ -15,9 +15,11 @@ std::string extractLogFileName(const std::string &gnss_file) {
   size_t second_last_slash = parent_dir.find_last_of("/\\");
   std::string sub_parent_dir = parent_dir.substr(0, second_last_slash);
   size_t third_last_slash = sub_parent_dir.find_last_of("/\\");
-  if (third_last_slash == std::string::npos)
+  std::string sub_sub_parent_dir = parent_dir.substr(0, third_last_slash);
+  size_t fourth_last_slash = sub_sub_parent_dir.find_last_of("/\\");
+  if (fourth_last_slash == std::string::npos)
     return parent_dir + ".log";
-  return sub_parent_dir.substr(third_last_slash + 1) + ".log";
+  return sub_sub_parent_dir.substr(fourth_last_slash + 1) + "_" + sub_parent_dir.substr(third_last_slash + 1) + ".log";
 }
 
 int main(int argc, char **argv) {
