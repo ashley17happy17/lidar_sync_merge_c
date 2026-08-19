@@ -16,6 +16,10 @@ struct LidarConfig {
   lidar_utils::SensorType type;
   Eigen::Vector3d trans;
   Eigen::Vector3d rot; // roll, pitch, yaw or similar.
+  // Seconds ADDED to this LiDAR's timestamps (both the filename time used for
+  // GNSS synchronisation and the per-point time used for deskew) to put them on
+  // the GNSS clock. A LiDAR clock running 1.145 s fast needs -1.145.
+  double time_offset = 0.0;
 };
 
 struct GNSSData {

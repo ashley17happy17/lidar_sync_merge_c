@@ -32,15 +32,41 @@ public:
 private:
   void loadConfig(const std::string &config_file);
   void loadGnssData();
+  void loadImuData();
+  void loadOdomData();
   void loadLidarContent();
-  void processFrame(const GNSSData &gnss, const GNSSData *next_gnss,
+  void processFrame(const GNSSData &gnss, const GNSSData &next_gnss,
                     const std::map<int, std::string> &matched_files);
+  // Vehicle pose in the local world frame at an arbitrary epoch, obtained by
+  // interpolating the GNSS trajectory (lerp on position, slerp on attitude).
+  // Clamps to the first/last record outside the trajectory.
+  Eigen::Matrix4d interpolatePoseAt(double t) const;
 
   YAML::Node config_;
   std::vector<GNSSData> gnss_data_list_;
+  // Lightweight position-only view of the GNSS trajectory, used as the
+  // translation source for motion compensation.
+  std::vector<lidar_utils::GnssSample> gnss_samples_;
+  // IMU gyro (+ optional accel) samples in the GNSS/vehicle FLU frame: the
+  // rotation source always, and the translation source for IMU_ACC.
+  std::vector<lidar_utils::ImuSample> imu_data_list_;
+  // Odometer velocity samples (vehicle FLU frame): translation source for ODOM.
+  std::vector<lidar_utils::OdomSample> odom_data_list_;
 
   // Config parameters
   std::string gnss_file_;
+  std::string imu_file_;
+  std::string odom_file_;
+  // Factor applied to the odom_file velocity columns to reach m/s (1.0 for a
+  // file already in m/s, 1/3.6 for a CAN speed logged in km/h).
+  double odom_scale_ = 1.0;
+  // Translation source for motion compensation (rotation is always the gyro).
+  lidar_utils::MotionMethod motion_method_ =
+      lidar_utils::MotionMethod::GNSS_TRANS;
+  // Use the legacy deskew instead: per-point GNSS pose interpolated between the
+  // current and next fix, no IMU. Kept for comparison against the newer methods;
+  // motion_method_ is unused when this is set.
+  bool use_legacy_motion_ = false;
   double gnss_std_thres_;
   double gnss_freq_;
   double lidar_hz_;

@@ -7,9 +7,55 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
   config_ = YAML::LoadFile(config_file);
 
   gnss_file_ = config_["gnss_file"].as<std::string>();
+  // Optional: IMU csv for gyro-based rotation compensation. If absent, motion
+  // compensation runs without rotation deskew.
+  if (config_["imu_file"])
+    imu_file_ = config_["imu_file"].as<std::string>();
+  // Optional: odometer csv (timestamp, vx[, vy, vz]) for ODOM_TRANS.
+  if (config_["odom_file"])
+    odom_file_ = config_["odom_file"].as<std::string>();
+  // Unit of the odom velocity columns. The library works in m/s, but a CAN
+  // vehicle-speed log is typically km/h, and feeding that in raw scales every
+  // deskew translation by 3.6.
+  if (config_["odom_speed_unit"]) {
+    std::string u = config_["odom_speed_unit"].as<std::string>();
+    if (u == "mps" || u == "m/s")
+      odom_scale_ = 1.0;
+    else if (u == "kph" || u == "km/h")
+      odom_scale_ = 1.0 / 3.6;
+    else {
+      LOG_WARN("Load Config: Unknown odom_speed_unit '"
+               << u << "', assuming m/s.");
+    }
+  }
+  // Escape hatch for anything the named units do not cover (e.g. raw counts):
+  // takes precedence over odom_speed_unit.
+  if (config_["odom_scale"])
+    odom_scale_ = config_["odom_scale"].as<double>();
+  // Motion-compensation translation source: GNSS (default), ODOM, or IMU_ACC.
+  if (config_["motion_method"]) {
+    std::string m = config_["motion_method"].as<std::string>();
+    if (m == "GNSS")
+      motion_method_ = lidar_utils::MotionMethod::GNSS_TRANS;
+    else if (m == "ODOM")
+      motion_method_ = lidar_utils::MotionMethod::ODOM_TRANS;
+    else if (m == "IMU_ACC")
+      motion_method_ = lidar_utils::MotionMethod::IMU_ACC_TRANS;
+    else if (m == "LEGACY")
+      use_legacy_motion_ = true;
+    else
+      LOG_WARN("Load Config: Unknown motion_method '"
+               << m << "', defaulting to GNSS.");
+  }
   gnss_std_thres_ = config_["gnss_std_thres"].as<double>();
   gnss_freq_ = config_["gnss_freq"].as<double>();
   lidar_hz_ = config_["lidar_hz"].as<double>();
+  // Clock offset between the LiDAR timestamps and the GNSS clock, in seconds,
+  // ADDED to every LiDAR time. A LiDAR running 1.145 s fast needs -1.145.
+  // Applies to all LiDARs; lidarN_time_offset overrides it for one sensor.
+  double lidar_time_offset = 0.0;
+  if (config_["lidar_time_offset"])
+    lidar_time_offset = config_["lidar_time_offset"].as<double>();
 
   // Load lidar configs (1 to 5)
   for (int i = 1; i <= 5; ++i) {
@@ -59,6 +105,14 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
       lc.trans = Eigen::Vector3d(la[0], la[1], la[2]);
       lc.rot = Eigen::Vector3d(bs[0], bs[1], bs[2]);
 
+      lc.time_offset = config_[prefix + "time_offset"]
+                           ? config_[prefix + "time_offset"].as<double>()
+                           : lidar_time_offset;
+      if (lc.time_offset != 0.0)
+        LOG_INFO("Load Config: LiDAR " << i << " timestamps shifted by "
+                                       << lc.time_offset * 1e3
+                                       << " ms to match the GNSS clock.");
+
       lidars_[i] = lc;
     }
   }
@@ -75,6 +129,25 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
   ds_voxel_size_ = config_["ds_voxel_size"].as<double>();
   motion_enable_ = config_["motion_enable"].as<bool>();
   merge_voxel_size_ = config_["merge_voxel_size"].as<double>();
+
+  // State the active deskew configuration explicitly: without this a wrong
+  // motion_method or a missing source file leaves no trace in the log.
+  if (use_legacy_motion_) {
+    LOG_INFO("Load Config: Motion compensation "
+             << (motion_enable_ ? "ENABLED" : "DISABLED")
+             << ", method = LEGACY (per-point GNSS pose interpolation between "
+                "the current and next fix; no IMU, and the scan tail beyond the "
+                "next fix is clamped)");
+  } else {
+    LOG_INFO("Load Config: Motion compensation "
+             << (motion_enable_ ? "ENABLED" : "DISABLED")
+             << ", rotation = IMU gyro, translation = "
+             << (motion_method_ == lidar_utils::MotionMethod::ODOM_TRANS
+                     ? "ODOM"
+                     : motion_method_ == lidar_utils::MotionMethod::IMU_ACC_TRANS
+                           ? "IMU_ACC"
+                           : "GNSS"));
+  }
 
   out_lidar_ = config_["out_lidar"].as<int>();
   out_fp_ = config_["out_fp"].as<std::string>();

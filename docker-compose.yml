@@ -14,11 +14,11 @@ services:
       - QT_X11_NO_MITSHM=1
       - NVIDIA_DRIVER_CAPABILITIES=all
     volumes:
-      - ./src:/root/catkin_ws/src
+      - ./src:/root/ws/src
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - "$HOME/.Xauthority:/root/.Xauthority:rw"
-      - ${DATA_PATH:-/tmp}:/root/catkin_ws/data
-      - ${PCD_PATH:-/tmp}:/root/catkin_ws/pcd
+      - ${DATA_PATH:-/tmp}:/root/ws/data
+      - ${PCD_PATH:-/tmp}:/root/ws/pcd
 
     stdin_open: true
     tty: true

@@ -6,37 +6,52 @@ log_level: "INFO"  # Supported levels: DEBUG, INFO, WARN, ERROR, FATAL
 console_output: false # Set to false to disable printing to terminal (errors will still print)
 
 # Data IO
-gnss_file: "/root/catkin_ws/pcd/20260723/rec01/VTS/20260723133522_gnss_full.csv"
+gnss_file: "/root/ws/pcd/20260723/rec01/VTS/20260723133522_gnss_full_cut.csv"
 gnss_std_thres: 500.0  # unit: meter
 gnss_freq: 10 # unit: Hz
 lidar_hz: 10 # unit: Hz, max allowed GNSS-to-LiDAR time gap during sync is 1/lidar_hz
+# Clock offset ADDED to every LiDAR timestamp (filename time used for GNSS sync
+# AND per-point time used for deskew) to put it on the GNSS clock. A LiDAR clock
+# running 1145 ms fast needs -1.145. Per-sensor override: lidarN_time_offset.
+lidar_time_offset: -1.145 # unit: second
+imu_file: "/root/ws/pcd/20260723/rec01/VTS/VTS_adr_20260723133522_imu.txt"
+imu_freq: 50 # unit: Hz
+odom_file: "/root/ws/pcd/20260723/rec01/VTS/can_VehSpeed.csv"  # optional: timestamp, vx[, vy, vz] (vehicle FLU); for ODOM
+odom_speed_unit: "kph"  # unit of the vx/vy/vz columns: "mps" or "kph" (CAN VehSpeed is usually km/h)
+# odom_scale: 1.0       # optional: explicit factor to m/s, overrides odom_speed_unit
+# Motion-compensation translation source (rotation is always the IMU gyro):
+#   GNSS    : GNSS position delta
+#   ODOM    : integrated odometer velocity
+#   IMU_ACC : double-integrated IMU accel
+#   LEGACY  : old method - per-point GNSS pose interpolation, no IMU (for comparison)
+motion_method: "ODOM"
 
 # LIDAR parameters (GNSS Antenna to LiDAR in Front/Right/Down Axes(meter,degree))
-lidar1_fp: "/root/catkin_ws/pcd/20260723/rec01/PCD/top/"    # If there's no LiDAR data input, leave "", but can't all LiDARs are ""
+lidar1_fp: "/root/ws/pcd/20260723/rec01/PCD/top/"    # If there's no LiDAR data input, leave "", but can't all LiDARs are ""
 lidar1_format: "PCD_BINARY"    # Supported:  OUSTER_OS1_128, OUSTER_OS1_32, VELODYNE_VLP16, VELODYNE_VLS128
 lidar1_type: "OUSTER_OS1_128"    # Supported: PCD_BINARY, PCD_ASCII
 lidar1_la: [0.467, 0.267, -0.396] # unit: meter
 lidar1_bs: [-2.131, 0.677, -89.420] # unit: degree  //[-0.235, 0.496, 100.892]
 
-lidar2_fp: "/root/catkin_ws/pcd/20260723/rec01/PCD/rear_left/"
+lidar2_fp: "/root/ws/pcd/20260723/rec01/PCD/rear_left/"
 lidar2_format: "PCD_BINARY"
 lidar2_type: "VELODYNE_VLP16"
 lidar2_la: [-1.013, -0.636, 0.628] # unit: meter
 lidar2_bs: [-0.020, 1.297, 5.778] # unit: degree
 
-lidar3_fp: "/root/catkin_ws/pcd/20260723/rec01/PCD/rear_right/"
+lidar3_fp: "/root/ws/pcd/20260723/rec01/PCD/rear_right/"
 lidar3_format: "PCD_BINARY"
 lidar3_type: "VELODYNE_VLP16"
 lidar3_la: [-0.939, 1.123, 0.682] # unit: meter
 lidar3_bs: [-0.858, 4.668, 2.201] # unit: degree
 
-lidar4_fp: "/root/catkin_ws/pcd/20260723/rec01/PCD/front_right/"
+lidar4_fp: "/root/ws/pcd/20260723/rec01/PCD/front_right/"
 lidar4_format: "PCD_BINARY"
 lidar4_type: "VELODYNE_VLP16"
 lidar4_la: [3.136, 1.114, 0.704] # unit: meter
 lidar4_bs: [0.602, 2.361, -7.354] # unit: degree
 
-lidar5_fp: "/root/catkin_ws/pcd/20260723/rec01/PCD/front_left/"
+lidar5_fp: "/root/ws/pcd/20260723/rec01/PCD/front_left/"
 lidar5_format: "PCD_BINARY"
 lidar5_type: "VELODYNE_VLP16"
 lidar5_la: [3.163, -0.700, 0.630] # unit: meter
@@ -61,7 +76,7 @@ merge_voxel_size: 0.01 # unit: meter
 
 # Parameters for Output
 out_lidar: 1
-out_fp: "/root/catkin_ws/pcd/20260723/rec01/Merge/"
+out_fp: "/root/ws/pcd/test_0723/tmp/"
 out_format: "PCD_BINARY"
 out_la: [0.0, 0.0, 0.0] # unit: meter
 out_bs: [0.0, 0.0, 0.0] # unit: degree
