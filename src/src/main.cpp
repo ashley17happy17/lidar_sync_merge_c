@@ -1,11 +1,15 @@
 #include "lidar_dynamicmerge_c/dynamic_merge_node.hpp"
 #include "lidar_dynamicmerge_c/logger.hpp"
+#include <filesystem>
 #include <iostream>
 #include <pcl/console/print.h>
 #include <string>
-#include <sys/stat.h>
 #include <vector>
 #include <yaml-cpp/yaml.h>
+
+namespace {
+constexpr const char *kFallbackLogDir = "log";
+}
 
 std::string extractLogFileName(const std::string &gnss_file) {
   size_t last_slash = gnss_file.find_last_of("/\\");
@@ -22,6 +26,33 @@ std::string extractLogFileName(const std::string &gnss_file) {
   return sub_sub_parent_dir.substr(fourth_last_slash + 1) + "_" + sub_parent_dir.substr(third_last_slash + 1) + ".log";
 }
 
+std::string extractLogDir(const std::string &gnss_file) {
+  std::filesystem::path gnss_dir =
+      std::filesystem::path(gnss_file).parent_path();
+  if (gnss_dir.empty())
+    return kFallbackLogDir;
+  std::filesystem::path record_dir = gnss_dir.parent_path();
+  if (record_dir.empty() || record_dir == record_dir.root_path())
+    return kFallbackLogDir;
+  return (record_dir / "Logs").string();
+}
+
+// Creates log_dir and returns the full log file path, falling back to the
+// local "log" folder when the derived directory is not writable.
+std::string prepareLogPath(const std::string &log_dir,
+                           const std::string &log_filename) {
+  std::error_code ec;
+  std::filesystem::create_directories(log_dir, ec);
+  if (ec) {
+    std::cerr << "Failed to create log directory: " << log_dir << " ("
+              << ec.message() << "), falling back to " << kFallbackLogDir
+              << std::endl;
+    std::filesystem::create_directories(kFallbackLogDir, ec);
+    return std::string(kFallbackLogDir) + "/" + log_filename;
+  }
+  return log_dir + "/" + log_filename;
+}
+
 int main(int argc, char **argv) {
   if (argc != 2) {
     std::cerr << "Usage: " << argv[0] << " <config_file>\n";
@@ -30,14 +61,16 @@ int main(int argc, char **argv) {
   std::string config_file = argv[1];
 
   std::string log_filename = "dynamic_merge.log";
+  std::string log_dir = kFallbackLogDir;
   try {
     YAML::Node config = YAML::LoadFile(config_file);
     if (config["gnss_file"]) {
-      log_filename = extractLogFileName(config["gnss_file"].as<std::string>());
+      std::string gnss_file = config["gnss_file"].as<std::string>();
+      log_dir = extractLogDir(gnss_file);
     }
 
-    mkdir("log", 0777);
-    lidar_dynamic_merge::Logger::getInstance().init("log/" + log_filename);
+    lidar_dynamic_merge::Logger::getInstance().init(
+        prepareLogPath(log_dir, log_filename));
 
     if (config["log_level"]) {
       std::string level_str = config["log_level"].as<std::string>();
@@ -63,8 +96,8 @@ int main(int argc, char **argv) {
           config["console_output"].as<bool>());
     }
   } catch (...) {
-    mkdir("log", 0777);
-    lidar_dynamic_merge::Logger::getInstance().init("log/" + log_filename);
+    lidar_dynamic_merge::Logger::getInstance().init(
+        prepareLogPath(log_dir, log_filename));
   }
 
   // Suppress PCL warnings (like "Leaf size is too small for")
