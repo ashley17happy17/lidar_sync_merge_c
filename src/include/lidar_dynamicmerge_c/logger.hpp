@@ -74,7 +74,7 @@ public:
     std::string log_msg = ss.str();
 
     std::lock_guard<std::mutex> lock(mutex_);
-    if (console_output_) {
+    if (console_output_ || level == LogLevel::ERROR || level == LogLevel::FATAL) {
       if (level == LogLevel::ERROR || level == LogLevel::FATAL) {
         std::cerr << log_msg << std::endl;
       } else {

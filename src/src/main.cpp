@@ -64,9 +64,12 @@ int main(int argc, char **argv) {
   std::string log_dir = kFallbackLogDir;
   try {
     YAML::Node config = YAML::LoadFile(config_file);
-    if (config["gnss_file"]) {
-      std::string gnss_file = config["gnss_file"].as<std::string>();
-      log_dir = extractLogDir(gnss_file);
+    if (config["bag_file"] && !config["bag_file"].as<std::string>().empty()) {
+      std::string bag_file = config["bag_file"].as<std::string>();
+      log_dir = extractLogDir(bag_file);
+    } else if (config["gnss_source"]) {
+      std::string gnss_source = config["gnss_source"].as<std::string>();
+      log_dir = extractLogDir(gnss_source);
     }
 
     lidar_dynamic_merge::Logger::getInstance().init(

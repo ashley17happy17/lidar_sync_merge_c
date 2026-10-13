@@ -6,14 +6,24 @@ namespace lidar_dynamic_merge {
 void DynamicMergeNode::loadConfig(const std::string &config_file) {
   config_ = YAML::LoadFile(config_file);
 
-  gnss_file_ = config_["gnss_file"].as<std::string>();
-  // Optional: IMU csv for gyro-based rotation compensation. If absent, motion
-  // compensation runs without rotation deskew.
-  if (config_["imu_file"])
-    imu_file_ = config_["imu_file"].as<std::string>();
-  // Optional: odometer csv (timestamp, vx[, vy, vz]) for ODOM_TRANS.
-  if (config_["odom_file"])
-    odom_file_ = config_["odom_file"].as<std::string>();
+  if (config_["bag_file"])
+    bag_file_ = config_["bag_file"].as<std::string>();
+
+  if (config_["gnss_source"])
+    gnss_source_ = config_["gnss_source"].as<std::string>();
+  else {
+    LOG_FATAL("Load Config: Missing gnss_source (or gnss_file) in config.");
+    exit(1);
+  }
+
+  // Optional: IMU source for gyro-based rotation compensation.
+  if (config_["imu_source"])
+    imu_source_ = config_["imu_source"].as<std::string>();
+
+  // Optional: odometer source for ODOM_TRANS.
+  if (config_["odom_source"])
+    odom_source_ = config_["odom_source"].as<std::string>();
+
   // Unit of the odom velocity columns. The library works in m/s, but a CAN
   // vehicle-speed log is typically km/h, and feeding that in raw scales every
   // deskew translation by 3.6.
@@ -60,16 +70,15 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
   // Load lidar configs (1 to 5)
   for (int i = 1; i <= 5; ++i) {
     std::string prefix = "lidar" + std::to_string(i) + "_";
-    if (config_[prefix + "fp"]) {
-      std::string path = config_[prefix + "fp"].as<std::string>();
-      if (path.empty()) {
+    if (config_[prefix + "source"]) {
+      LidarConfig lc;
+      lc.source = config_[prefix + "source"].as<std::string>();
+      if (lc.source.empty()) {
         LOG_WARN("Load Config: Skipping LiDAR " << i
-                                                << " because fp is empty.");
+                                                << " because source is empty.");
         continue;
       }
 
-      LidarConfig lc;
-      lc.path = path;
       if (config_[prefix + "type"]) {
         std::string type_str = config_[prefix + "type"].as<std::string>();
         if (type_str == "OUSTER_OS1_128")
@@ -150,9 +159,11 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
   }
 
   out_lidar_ = config_["out_lidar"].as<int>();
-  out_fp_ = config_["out_fp"].as<std::string>();
-  if (!out_fp_.empty()) {
-    std::filesystem::create_directories(out_fp_);
+  if (config_["out_source"]) {
+    out_source_ = config_["out_source"].as<std::string>();
+    if (!out_source_.empty()) {
+      std::filesystem::create_directories(out_source_);
+    }
   }
   std::string fmt = config_["out_format"].as<std::string>();
   if (fmt == "PCD_ASCII")

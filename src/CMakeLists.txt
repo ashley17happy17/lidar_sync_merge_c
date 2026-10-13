@@ -19,6 +19,14 @@ find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 # Find PDAL
 find_package(PDAL REQUIRED)
+# Find catkin / ROS 1
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  rosbag
+  sensor_msgs
+  nav_msgs
+  geometry_msgs
+)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(BUILD_WITH_OPENMP ON CACHE BOOL "" FORCE)
@@ -41,16 +49,20 @@ add_executable(${PROJECT_NAME}_node
   src/gnss_processor.cpp
   src/config_loader.cpp
   src/time_sync.cpp
+  src/file_loader.cpp
+  src/bag_loader.cpp
 )
 
 target_include_directories(${PROJECT_NAME}_node PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${PDAL_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME}_node
+  ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   ${PDAL_LIBRARIES}
   lidar_utils

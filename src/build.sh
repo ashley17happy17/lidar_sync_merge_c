@@ -9,6 +9,10 @@ if [ ! -d "third_party" ]; then
     bash create_third_party.sh
 fi
 
+if [ -f "/opt/ros/noetic/setup.bash" ]; then
+    source /opt/ros/noetic/setup.bash
+fi
+
 BUILD_TYPE="${BUILD_TYPE:-RelWithDebInfo}"
 JOBS="${JOBS:-$(nproc)}"
 

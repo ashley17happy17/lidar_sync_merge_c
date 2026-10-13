@@ -46,6 +46,52 @@ void WGS84toTWD97(double lat, double lon, double &x, double &y) {
                     std::pow(A, 6) / 720));
 }
 
+double headingToEnuYaw(double heading_deg) {
+  // Heading: input is North=0, East=90 (Clockwise).
+  // Standard ENU Yaw is East=0, North=90 (Counter-Clockwise).
+  double yaw = 90.0 - heading_deg;
+  while (yaw > 180.0)
+    yaw -= 360.0;
+  while (yaw < -180.0)
+    yaw += 360.0;
+  return yaw;
+}
+
+bool convertRawFixToGNSSData(double timestamp, double lat, double lon, double alt,
+                             double roll, double pitch, double heading,
+                             const Eigen::Vector3d &std_xyz, double geoid_sep,
+                             Eigen::Vector3d &local_origin, bool &origin_set,
+                             GNSSData &out_data) {
+  double x = 0.0, y = 0.0;
+  WGS84toTWD97(lat, lon, x, y);
+  double z = alt;
+
+  if (!origin_set) {
+    local_origin = Eigen::Vector3d(x, y, z);
+    origin_set = true;
+    LOG_INFO(
+        std::fixed
+        << std::setprecision(10)
+        << "Process GNSS: Projecting GNSS from WGS84 -> TWD97-2010 "
+           "projection -> Local Cartesian, set Local Cartesian Origin to "
+           "TWD97: X="
+        << x << ", Y=" << y << ", Z=" << z);
+  }
+
+  x -= local_origin.x();
+  y -= local_origin.y();
+  z -= local_origin.z();
+
+  double yaw = headingToEnuYaw(heading);
+
+  out_data.timestamp = timestamp;
+  out_data.pose_6d = Eigen::VectorXd(6);
+  out_data.pose_6d << x, y, z, roll, pitch, yaw;
+  out_data.position_std = std_xyz;
+  out_data.geoidSep = geoid_sep;
+  return true;
+}
+
 void processGNSSData(const std::string &gnss_file_path,
                      std::vector<GNSSData> &gnss_data_list,
                      Eigen::Vector3d &local_origin) {
@@ -53,83 +99,125 @@ void processGNSSData(const std::string &gnss_file_path,
   std::ifstream gnss_file(gnss_file_path);
 
   if (!gnss_file.is_open()) {
-    LOG_FATAL("Process GNSS: Could not open the GNSS file.");
+    LOG_FATAL("Process GNSS: Could not open the GNSS file: " << gnss_file_path);
     exit(1);
   }
 
+  struct RawFix {
+    double ts;
+    double lat;
+    double lon;
+    double h;
+    Eigen::Vector3d pos_std;
+    double roll;
+    double pitch;
+    double heading_deg;
+    double geoid;
+    bool has_orientation;
+  };
+
+  std::vector<RawFix> raw_fixes;
   std::string line, word;
   bool origin_set = false;
+  bool detected_7_col = false;
 
   while (std::getline(gnss_file, line)) {
+    // Replace comma and tab with space for uniform tokenization
+    for (char &c : line) {
+      if (c == ',' || c == '\t')
+        c = ' ';
+    }
+
     std::vector<std::string> row;
     std::stringstream ss(line);
-
-    // Split individual line by comma
-    while (std::getline(ss, word, ',')) {
+    while (ss >> word) {
       row.push_back(word);
     }
 
-    if (row.size() < 11)
+    if (row.size() < 7)
       continue;
 
     try {
-      // Extract raw Lat/Lon/H
-      double lat = std::stod(row[1]);
-      double lon = std::stod(row[2]);
-      double h = std::stod(row[3]);
+      RawFix fix;
+      fix.ts = std::stod(row[0]);
+      fix.lat = std::stod(row[1]);
+      fix.lon = std::stod(row[2]);
+      fix.h = std::stod(row[3]);
+      fix.pos_std = Eigen::Vector3d(std::stod(row[4]), std::stod(row[5]), std::stod(row[6]));
 
-      // Convert WGS84 to TWD97 (EPSG:3826)
-      double x = 0.0, y = 0.0;
-      WGS84toTWD97(lat, lon, x, y);
-      double z =
-          h; // Or h - geoidSep if orthometric height is strictly required
-
-      // Capture the first valid global TWD97 point as the Local Origin
-      if (!origin_set) {
-        local_origin = Eigen::Vector3d(x, y, z);
-        origin_set = true;
-        LOG_INFO(
-            std::fixed
-            << std::setprecision(10)
-            << "Process GNSS: Projecting GNSS from WGS84 -> TWD97-2010 "
-               "projection -> Local Cartesian, set Local Cartesian Origin to "
-               "TWD97: X="
-            << x << ", Y=" << y << ", Z=" << z);
+      if (row.size() >= 11) {
+        fix.roll = std::stod(row[7]);
+        fix.pitch = std::stod(row[8]);
+        fix.heading_deg = std::stod(row[9]);
+        fix.geoid = std::stod(row[10]);
+        fix.has_orientation = true;
+      } else {
+        fix.roll = 0.0;
+        fix.pitch = 0.0;
+        fix.heading_deg = 0.0;
+        fix.geoid = 0.0;
+        fix.has_orientation = false;
+        detected_7_col = true;
       }
-
-      // Transform to Local Cartesian
-      x -= local_origin.x();
-      y -= local_origin.y();
-      z -= local_origin.z();
-
-      // Keep RPY in degrees as expected by motion_impl
-      double roll = std::stod(row[7]);
-      double pitch = std::stod(row[8]);
-
-      // Heading: input is North=0, East=90 (Clockwise).
-      // Standard ENU Yaw is East=0, North=90 (Counter-Clockwise).
-      double heading_deg = std::stod(row[9]);
-      double yaw = 90.0 - heading_deg;
-
-      // Normalize yaw to [-180, 180]
-      while (yaw > 180.0)
-        yaw -= 360.0;
-      while (yaw < -180.0)
-        yaw += 360.0;
-
-      GNSSData data;
-      data.timestamp = std::stod(row[0]);
-      data.pose_6d = Eigen::VectorXd(6);
-      data.pose_6d << x, y, z, roll, pitch, yaw;
-      data.position_std = Eigen::Vector3d(std::stod(row[4]), std::stod(row[5]),
-                                          std::stod(row[6]));
-      data.geoidSep = std::stod(row[10]);
-      gnss_data_list.push_back(data);
+      raw_fixes.push_back(fix);
     } catch (...) {
       // Ignore header or malformed rows
     }
   }
   gnss_file.close();
+
+  if (detected_7_col) {
+    LOG_WARN("Process GNSS: 7-column format detected (missing orientation). "
+             "Defaulting roll=0, pitch=0 and estimating heading from trajectory.");
+  }
+
+  double last_heading = 0.0;
+  bool has_heading = false;
+
+  for (size_t i = 0; i < raw_fixes.size(); ++i) {
+    double heading = raw_fixes[i].heading_deg;
+
+    if (!raw_fixes[i].has_orientation) {
+      double dx = 0.0, dy = 0.0;
+      if (i + 1 < raw_fixes.size()) {
+        double x_next, y_next, x_curr, y_curr;
+        WGS84toTWD97(raw_fixes[i + 1].lat, raw_fixes[i + 1].lon, x_next, y_next);
+        WGS84toTWD97(raw_fixes[i].lat, raw_fixes[i].lon, x_curr, y_curr);
+        dx = x_next - x_curr;
+        dy = y_next - y_curr;
+      } else if (i > 0) {
+        double x_prev, y_prev, x_curr, y_curr;
+        WGS84toTWD97(raw_fixes[i - 1].lat, raw_fixes[i - 1].lon, x_prev, y_prev);
+        WGS84toTWD97(raw_fixes[i].lat, raw_fixes[i].lon, x_curr, y_curr);
+        dx = x_curr - x_prev;
+        dy = y_curr - y_prev;
+      }
+
+      double dist = std::hypot(dx, dy);
+      if (dist > 0.1) {
+        // TWD97: x is East, y is North.
+        // Clockwise heading from North (North=0, East=90):
+        heading = std::atan2(dx, dy) * 180.0 / M_PI;
+        if (heading < 0.0)
+          heading += 360.0;
+        last_heading = heading;
+        has_heading = true;
+      } else if (has_heading) {
+        heading = last_heading;
+      } else {
+        heading = 0.0;
+      }
+    }
+
+    GNSSData data;
+    if (convertRawFixToGNSSData(raw_fixes[i].ts, raw_fixes[i].lat, raw_fixes[i].lon,
+                                raw_fixes[i].h, raw_fixes[i].roll, raw_fixes[i].pitch,
+                                heading, raw_fixes[i].pos_std, raw_fixes[i].geoid,
+                                local_origin, origin_set, data)) {
+      gnss_data_list.push_back(data);
+    }
+  }
+
   LOG_INFO("Process GNSS: Successfully loaded " << gnss_data_list.size()
                                                 << " GNSS records.");
 }

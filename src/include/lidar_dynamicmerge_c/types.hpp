@@ -11,7 +11,7 @@
 namespace lidar_dynamic_merge {
 
 struct LidarConfig {
-  std::string path;
+  std::string source;
   lidar_utils::FileFormat format;
   lidar_utils::SensorType type;
   Eigen::Vector3d trans;
