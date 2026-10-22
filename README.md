@@ -155,7 +155,8 @@ merge_voxel_size: 0.01
 # Output Parameters
 # -------------------------------------------------------------------
 out_lidar: 1
-out_source: "/root/ws/pcd/20260918/rec01/Merge/"
+out_pcd: "/root/ws/pcd/20260918/rec01/Merge/"
+out_traj: "/root/ws/pcd/20260918/rec01/Ego/ego_traj.csv"
 out_format: "PCD_BINARY"
 out_la: [0.0, 0.0, 0.0]
 out_bs: [0.0, 0.0, 0.0]

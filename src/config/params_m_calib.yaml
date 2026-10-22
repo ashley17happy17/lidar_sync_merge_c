@@ -79,7 +79,8 @@ merge_voxel_size: 0.01 # unit: meter
 
 # Parameters for Output
 out_lidar: 1
-out_fp: "/root/ws/pcd/output/20260629_a_pcd/"
+out_pcd: "/root/ws/pcd/output/20260629_a_pcd/"
+out_traj: "/root/ws/pcd/output/20260629_a_pcd/ego_traj.csv"
 out_format: "PCD_BINARY"
 out_la: [0.0, 0.0, 0.0] # unit: meter
 out_bs: [0.0, 0.0, 0.0] # unit: degree

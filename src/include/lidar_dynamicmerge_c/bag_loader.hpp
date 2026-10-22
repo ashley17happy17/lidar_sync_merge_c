@@ -70,12 +70,17 @@ public:
                                 std::vector<double> &timestamps,
                                 double time_offset = 0.0);
 
+  const std::vector<ImuOrientation> &getImuOrientations() const { return imu_orientations_; }
+
 private:
 
   std::string bag_file_path_;
   rosbag::Bag bag_;
   bool is_open_ = false;
   std::mutex bag_mutex_;
+
+  // Stores indexed IMU orientations for orientation interpolation
+  std::vector<ImuOrientation> imu_orientations_;
 
   // Stores lightweight MessageInstances per LiDAR for on-demand lazy reading
   std::map<int, std::vector<rosbag::MessageInstance>> lidar_messages_;

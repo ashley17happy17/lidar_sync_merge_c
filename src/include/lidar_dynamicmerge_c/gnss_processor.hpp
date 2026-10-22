@@ -29,4 +29,7 @@ void processGNSSData(const std::string &gnss_file_path,
                      std::vector<GNSSData> &gnss_data_list,
                      Eigen::Vector3d &local_origin);
 
+// Interpolates GNSSData (position, orientation, and pose_6d) at timestamp t
+GNSSData interpolateGnss(double t, const std::vector<GNSSData> &gnss_list);
+
 } // namespace lidar_dynamic_merge

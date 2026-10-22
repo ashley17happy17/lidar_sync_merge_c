@@ -159,10 +159,29 @@ void DynamicMergeNode::loadConfig(const std::string &config_file) {
   }
 
   out_lidar_ = config_["out_lidar"].as<int>();
-  if (config_["out_source"]) {
+  if (config_["out_pcd"]) {
+    out_source_ = config_["out_pcd"].as<std::string>();
+  } else if (config_["out_source"]) {
     out_source_ = config_["out_source"].as<std::string>();
-    if (!out_source_.empty()) {
-      std::filesystem::create_directories(out_source_);
+  } else if (config_["out_fp"]) {
+    out_source_ = config_["out_fp"].as<std::string>();
+  }
+  if (!out_source_.empty()) {
+    std::filesystem::create_directories(out_source_);
+  }
+
+  if (config_["out_traj"]) {
+    out_traj_ = config_["out_traj"].as<std::string>();
+    if (!out_traj_.empty()) {
+      std::filesystem::path traj_p(out_traj_);
+      if (traj_p.extension() == ".csv") {
+        if (traj_p.has_parent_path()) {
+          std::filesystem::create_directories(traj_p.parent_path());
+        }
+      } else {
+        std::filesystem::create_directories(traj_p);
+        out_traj_ = (traj_p / "ego_traj.csv").string();
+      }
     }
   }
   std::string fmt = config_["out_format"].as<std::string>();

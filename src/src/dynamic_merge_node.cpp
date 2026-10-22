@@ -1,6 +1,7 @@
 #include "lidar_dynamicmerge_c/dynamic_merge_node.hpp"
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 
@@ -96,7 +97,8 @@ Eigen::Matrix4d DynamicMergeNode::interpolatePoseAt(double t) const {
 
 void DynamicMergeNode::processFrame(
     const GNSSData &gnss, const GNSSData &next_gnss,
-    const std::map<int, std::string> &matched_files) {
+    const std::map<int, std::string> &matched_files,
+    const std::string &time_stem) {
   pcl::PointCloud<pcl::PointXYZI>::Ptr merged_cloud(
       new pcl::PointCloud<pcl::PointXYZI>);
 
@@ -224,21 +226,20 @@ void DynamicMergeNode::processFrame(
                                                 inv_ext);
 
     // === Save Dynamic Merge File ===
-    std::string out_file = out_source_ + "/" +
-                           std::to_string(static_cast<uint64_t>(
-                               std::round(gnss.timestamp * 1e3))) +
-                           ".pcd";
+    std::string stem = time_stem.empty() ? computeTimeStem(gnss, matched_files) : time_stem;
+    std::string out_file = (std::filesystem::path(out_source_) / (stem + ".pcd")).string();
     lidar_utils::CloudUtils::saveFile(merged_cloud, out_file, out_format_);
   }
 }
 
-void DynamicMergeNode::runBagPipelined(const std::vector<SyncFrame> &sync_frames) {
+void DynamicMergeNode::runBagPipelined(std::vector<SyncFrame> &sync_frames) {
   const size_t total_frames = sync_frames.size();
   BoundedQueue<FramePayload> queue(32);
   std::atomic<int> processed_frames{0};
 
   // Launch sequential producer thread (reads rosbag sequentially from start to finish)
   std::thread producer([&]() {
+    std::string last_pushed_stem;
     for (size_t i = 0; i < total_frames; ++i) {
       FramePayload payload;
       payload.frame_index = i;
@@ -255,6 +256,45 @@ void DynamicMergeNode::runBagPipelined(const std::vector<SyncFrame> &sync_frames
           }
         }
       }
+
+      int ref_id = lidars_.count(1) ? 1 : (lidars_.count(out_lidar_) ? out_lidar_ : (lidars_.empty() ? -1 : lidars_.begin()->first));
+      if (ref_id < 0 || payload.lidar_msgs.find(ref_id) == payload.lidar_msgs.end() || !payload.lidar_msgs.at(ref_id)) {
+        for (const auto &[id, msg] : payload.lidar_msgs) {
+          if (msg) {
+            ref_id = id;
+            break;
+          }
+        }
+      }
+
+      std::string out_stem;
+      double t_lidar = payload.curr_gnss.timestamp;
+      if (ref_id >= 0 && payload.lidar_msgs.count(ref_id) && payload.lidar_msgs.at(ref_id)) {
+        const auto &msg = payload.lidar_msgs.at(ref_id);
+        if (msg->header.stamp.sec > 0 || msg->header.stamp.nsec > 0) {
+          t_lidar = static_cast<double>(msg->header.stamp.sec) +
+                    static_cast<double>(msg->header.stamp.nsec) * 1e-9;
+          uint64_t ts_ms = static_cast<uint64_t>(msg->header.stamp.sec) * 1000ULL +
+                           static_cast<uint64_t>(std::round(msg->header.stamp.nsec * 1e-6));
+          out_stem = std::to_string(ts_ms);
+        }
+      }
+
+      if (out_stem.empty()) {
+        out_stem = std::to_string(static_cast<uint64_t>(std::round(payload.curr_gnss.timestamp * 1e3)));
+      }
+
+      payload.time_stem = out_stem;
+      payload.lidar_time = t_lidar;
+      sync_frames[i].time_stem = out_stem;
+      sync_frames[i].lidar_time = t_lidar;
+
+      if (!last_pushed_stem.empty() && out_stem == last_pushed_stem) {
+        LOG_WARN("runBagPipelined: Skipping duplicate frame with time_stem: " << out_stem);
+        continue;
+      }
+      last_pushed_stem = out_stem;
+
       queue.push(std::move(payload));
     }
     queue.finish();
@@ -267,9 +307,8 @@ void DynamicMergeNode::runBagPipelined(const std::vector<SyncFrame> &sync_frames
     while (queue.pop(payload)) {
       processFrameFromPayload(payload);
       int current_processed = ++processed_frames;
-      LOG_INFO("Run: Finish merge GNSS timestamp: "
-               << std::setprecision(13) << payload.next_gnss.timestamp
-               << ", frame: " << current_processed << " / " << total_frames);
+      LOG_INFO("Run: Finish merge frame " << current_processed << " / " << total_frames
+               << " (GNSS timestamp: " << std::setprecision(13) << payload.curr_gnss.timestamp << ")");
     }
   }
 
@@ -377,12 +416,180 @@ void DynamicMergeNode::processFrameFromPayload(const FramePayload &payload) {
                                                 inv_ext);
 
     // === Save Dynamic Merge File ===
-    std::string out_file = out_source_ + "/" +
-                           std::to_string(static_cast<uint64_t>(
-                               std::round(gnss.timestamp * 1e3))) +
-                           ".pcd";
+    std::string stem = payload.time_stem.empty()
+                           ? std::to_string(static_cast<uint64_t>(std::round(gnss.timestamp * 1e3)))
+                           : payload.time_stem;
+    std::string out_file = (std::filesystem::path(out_source_) / (stem + ".pcd")).string();
     lidar_utils::CloudUtils::saveFile(merged_cloud, out_file, out_format_);
   }
+}
+
+std::string DynamicMergeNode::computeTimeStem(
+    const GNSSData &gnss,
+    const std::map<int, std::string> &matched_files,
+    double *out_time_sec) const {
+  int ref_id = lidars_.count(1) ? 1 : (lidars_.count(out_lidar_) ? out_lidar_ : (lidars_.empty() ? -1 : lidars_.begin()->first));
+  if (ref_id < 0 || matched_files.find(ref_id) == matched_files.end()) {
+    for (const auto &[id, path] : matched_files) {
+      ref_id = id;
+      break;
+    }
+  }
+
+  std::string out_stem;
+  double t_sec = gnss.timestamp;
+
+  if (ref_id >= 0 && matched_files.count(ref_id)) {
+    const std::string &ref_file = matched_files.at(ref_id);
+    if (bag_loader_) {
+      size_t msg_idx = std::stoull(ref_file);
+      auto msg = bag_loader_->readPointCloud2Msg(ref_id, msg_idx);
+      if (msg && (msg->header.stamp.sec > 0 || msg->header.stamp.nsec > 0)) {
+        t_sec = static_cast<double>(msg->header.stamp.sec) +
+                static_cast<double>(msg->header.stamp.nsec) * 1e-9;
+        uint64_t ts_ms = static_cast<uint64_t>(msg->header.stamp.sec) * 1000ULL +
+                         static_cast<uint64_t>(std::round(msg->header.stamp.nsec * 1e-6));
+        out_stem = std::to_string(ts_ms);
+      }
+    } else {
+      out_stem = std::filesystem::path(ref_file).stem().string();
+      try {
+        uint64_t ts_ms = std::stoull(out_stem);
+        t_sec = static_cast<double>(ts_ms) * 1e-3;
+      } catch (...) {
+        t_sec = gnss.timestamp;
+      }
+    }
+  }
+
+  if (out_stem.empty()) {
+    uint64_t ts_ms = static_cast<uint64_t>(std::round(gnss.timestamp * 1e3));
+    out_stem = std::to_string(ts_ms);
+    t_sec = gnss.timestamp;
+  }
+
+  if (out_time_sec) {
+    *out_time_sec = t_sec;
+  }
+  return out_stem;
+}
+
+GNSSData DynamicMergeNode::interpolateGnss(double t, const std::vector<GNSSData> &gnss_list) const {
+  return lidar_dynamic_merge::interpolateGnss(t, gnss_list);
+}
+
+void DynamicMergeNode::interpolateImuOrientation(
+    double t, const std::vector<ImuOrientation> &imu_list,
+    double &roll_rad, double &pitch_rad, double &yaw_rad) const {
+  if (imu_list.empty()) {
+    roll_rad = 0.0;
+    pitch_rad = 0.0;
+    yaw_rad = 0.0;
+    return;
+  }
+
+  Eigen::Quaterniond q;
+  if (t <= imu_list.front().timestamp) {
+    q = imu_list.front().q;
+  } else if (t >= imu_list.back().timestamp) {
+    q = imu_list.back().q;
+  } else {
+    auto it = std::lower_bound(
+        imu_list.begin(), imu_list.end(), t,
+        [](const ImuOrientation &a, double val) { return a.timestamp < val; });
+    const auto &prev = *(it - 1);
+    const auto &next = *it;
+    double dt = next.timestamp - prev.timestamp;
+    double alpha = dt > 1e-9 ? (t - prev.timestamp) / dt : 0.0;
+    q = prev.q.slerp(alpha, next.q).normalized();
+  }
+
+  Eigen::Matrix3d R = q.toRotationMatrix();
+  double cy = std::sqrt(R(2, 2) * R(2, 2) + R(1, 2) * R(1, 2));
+  roll_rad  = -std::atan2( R(1, 2), R(2, 2));
+  pitch_rad =  std::atan2( R(0, 2), cy);
+  yaw_rad   =  std::atan2(-R(0, 1), R(0, 0));
+}
+
+void DynamicMergeNode::writeEgoTrajectory(const std::vector<SyncFrame> &sync_frames) {
+  if (out_traj_.empty() || sync_frames.empty()) {
+    return;
+  }
+
+  LOG_INFO("Write Ego Trajectory: Writing trajectory to " << out_traj_ << " ...");
+  std::ofstream out(out_traj_);
+  if (!out.is_open()) {
+    LOG_ERROR("Write Ego Trajectory: Failed to open output file " << out_traj_);
+    return;
+  }
+
+  std::string source_val = "GNSS";
+  if (gnss_source_ == "/adr" || gnss_source_ == "adr") {
+    source_val = "ADR";
+  } else if (gnss_source_ == "/gps/fix" || gnss_source_ == "gps/fix") {
+    source_val = "DR";
+  }
+
+  out << "time,lat,lon,h,twd97x,twd97y,twd97z,roll_rad,pitch_rad,yaw_rad,source\n";
+
+  const auto *imu_orientations = bag_loader_ ? &bag_loader_->getImuOrientations() : nullptr;
+  std::string last_written_time;
+  size_t written_rows = 0;
+
+  for (const auto &frame : sync_frames) {
+    double t_lidar = frame.lidar_time;
+    if (t_lidar <= 0.0) {
+      if (!frame.time_stem.empty()) {
+        try {
+          t_lidar = static_cast<double>(std::stoull(frame.time_stem)) * 1e-3;
+        } catch (...) {
+          t_lidar = frame.curr_gnss.timestamp;
+        }
+      } else {
+        t_lidar = frame.curr_gnss.timestamp;
+      }
+    }
+
+    std::string time_str = frame.time_stem;
+    if (time_str.empty()) {
+      time_str = std::to_string(static_cast<uint64_t>(std::round(t_lidar * 1e3)));
+    }
+
+    if (!last_written_time.empty() && time_str == last_written_time) {
+      continue;
+    }
+    last_written_time = time_str;
+    written_rows++;
+
+    // 1. Interpolate position from gnss_source at t_lidar
+    GNSSData interp_gnss = interpolateGnss(t_lidar, gnss_data_list_);
+
+    // 2. Interpolate orientation at t_lidar
+    double roll_rad = 0.0, pitch_rad = 0.0, yaw_rad = 0.0;
+    if (bag_loader_ && imu_orientations && !imu_orientations->empty()) {
+      // Bag format: use imu_source
+      interpolateImuOrientation(t_lidar, *imu_orientations, roll_rad, pitch_rad, yaw_rad);
+    } else {
+      // Txt format (or fallback if IMU not in bag): use gnss_source
+      roll_rad = interp_gnss.raw_roll * M_PI / 180.0;
+      pitch_rad = interp_gnss.raw_pitch * M_PI / 180.0;
+      yaw_rad = interp_gnss.raw_yaw * M_PI / 180.0;
+    }
+
+    out << time_str << ","
+        << std::setprecision(16) << interp_gnss.lat << ","
+        << std::setprecision(16) << interp_gnss.lon << ","
+        << std::setprecision(16) << interp_gnss.alt << ","
+        << std::setprecision(16) << interp_gnss.twd97_x << ","
+        << std::setprecision(16) << interp_gnss.twd97_y << ","
+        << std::setprecision(16) << interp_gnss.twd97_z << ","
+        << std::setprecision(17) << roll_rad << ","
+        << std::setprecision(17) << pitch_rad << ","
+        << std::setprecision(17) << yaw_rad << ","
+        << source_val << "\n";
+  }
+  out.close();
+  LOG_INFO("Write Ego Trajectory: Successfully wrote " << written_rows << " trajectory rows to " << out_traj_);
 }
 
 void DynamicMergeNode::run() {
@@ -399,15 +606,32 @@ void DynamicMergeNode::run() {
 
   if (bag_loader_) {
     runBagPipelined(sync_frames);
+    writeEgoTrajectory(sync_frames);
     return;
   }
+
+  for (auto &frame : sync_frames) {
+    frame.time_stem = computeTimeStem(frame.curr_gnss, frame.matched_files, &frame.lidar_time);
+  }
+
+  // Deduplicate any consecutive frames sharing identical time_stem
+  std::vector<SyncFrame> unique_frames;
+  unique_frames.reserve(sync_frames.size());
+  for (const auto &f : sync_frames) {
+    if (unique_frames.empty() || unique_frames.back().time_stem != f.time_stem) {
+      unique_frames.push_back(f);
+    } else {
+      LOG_WARN("Run: Dropping duplicate sync frame with time_stem: " << f.time_stem);
+    }
+  }
+  sync_frames = std::move(unique_frames);
 
   int processed_frames = 0;
 
 #pragma omp parallel for schedule(dynamic)
   for (size_t i = 0; i < sync_frames.size(); ++i) {
     const auto &frame = sync_frames[i];
-    processFrame(frame.curr_gnss, frame.next_gnss, frame.matched_files);
+    processFrame(frame.curr_gnss, frame.next_gnss, frame.matched_files, frame.time_stem);
     
     int current_processed;
 #pragma omp atomic capture
@@ -416,13 +640,14 @@ void DynamicMergeNode::run() {
       current_processed = processed_frames;
     }
     
-    LOG_INFO("Run: Finish merge GNSS timestamp: "
-             << std::setprecision(13) << frame.next_gnss.timestamp
-             << ", frame: " << current_processed << " / " << sync_frames.size());
+    LOG_INFO("Run: Finish merge frame " << current_processed << " / " << sync_frames.size()
+             << " (GNSS timestamp: " << std::setprecision(13) << frame.curr_gnss.timestamp << ")");
   }
 
   LOG_INFO("Run: LiDAR_Dynamic_Merge finished running. Processed "
            << processed_frames << " synchronized frames.");
+
+  writeEgoTrajectory(sync_frames);
 }
 
 } // namespace lidar_dynamic_merge

@@ -22,8 +22,22 @@ struct LidarConfig {
   double time_offset = 0.0;
 };
 
+struct ImuOrientation {
+  double timestamp = 0.0;
+  Eigen::Quaterniond q = Eigen::Quaterniond::Identity();
+};
+
 struct GNSSData {
   double timestamp = 0.0;
+  double lat = 0.0;
+  double lon = 0.0;
+  double alt = 0.0;
+  double twd97_x = 0.0;
+  double twd97_y = 0.0;
+  double twd97_z = 0.0;
+  double raw_roll = 0.0;  // degrees (from GNSS/INS record)
+  double raw_pitch = 0.0; // degrees (from GNSS/INS record)
+  double raw_yaw = 0.0;   // degrees (from GNSS/INS record)
   Eigen::VectorXd pose_6d; // [x, y, z, roll, pitch, yaw]
   Eigen::Vector3d position_std = Eigen::Vector3d::Zero();
   double geoidSep = 0.0;
@@ -50,6 +64,8 @@ struct SyncFrame {
   GNSSData curr_gnss;
   GNSSData next_gnss;
   std::map<int, std::string> matched_files;
+  std::string time_stem;
+  double lidar_time = 0.0; // exact LiDAR timestamp in seconds
 };
 
 } // namespace lidar_dynamic_merge

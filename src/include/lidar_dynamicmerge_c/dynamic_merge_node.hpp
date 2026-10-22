@@ -72,6 +72,8 @@ struct FramePayload {
   GNSSData curr_gnss;
   GNSSData next_gnss;
   std::map<int, sensor_msgs::PointCloud2::ConstPtr> lidar_msgs;
+  std::string time_stem;
+  double lidar_time = 0.0;
 };
 
 class DynamicMergeNode {
@@ -86,9 +88,17 @@ private:
   void loadData();
   void buildGnssSamples();
   void processFrame(const GNSSData &gnss, const GNSSData &next_gnss,
-                    const std::map<int, std::string> &matched_files);
-  void runBagPipelined(const std::vector<SyncFrame> &sync_frames);
+                    const std::map<int, std::string> &matched_files,
+                    const std::string &time_stem = "");
+  void runBagPipelined(std::vector<SyncFrame> &sync_frames);
   void processFrameFromPayload(const FramePayload &payload);
+  std::string computeTimeStem(const GNSSData &gnss,
+                              const std::map<int, std::string> &matched_files,
+                              double *out_time_sec = nullptr) const;
+  GNSSData interpolateGnss(double t, const std::vector<GNSSData> &gnss_list) const;
+  void interpolateImuOrientation(double t, const std::vector<ImuOrientation> &imu_list,
+                                 double &roll_rad, double &pitch_rad, double &yaw_rad) const;
+  void writeEgoTrajectory(const std::vector<SyncFrame> &sync_frames);
   // Vehicle pose in the local world frame at an arbitrary epoch, obtained by
   // interpolating the GNSS trajectory (lerp on position, slerp on attitude).
   // Clamps to the first/last record outside the trajectory.
@@ -139,6 +149,7 @@ private:
   double merge_voxel_size_;
   int out_lidar_;
   std::string out_source_;
+  std::string out_traj_;
   lidar_utils::FileFormat out_format_;
   Eigen::Vector3d out_la_;
   Eigen::Vector3d out_bs_;
